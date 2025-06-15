@@ -13,6 +13,11 @@ app.use(cors({ optionsSuccessStatus: 200 }));  // some legacy browsers choke on 
 // http://expressjs.com/en/starter/static-files.html
 app.use(express.static('public'));
 
+app.use((req, res, next) => {
+  console.log(req.method + " " + req.path + " - " + req.ip);
+  next();
+});
+
 // http://expressjs.com/en/starter/basic-routing.html
 app.get("/", function (req, res) {
   res.sendFile(__dirname + '/views/index.html');
@@ -24,22 +29,36 @@ app.get("/api/hello", function (req, res) {
   res.json({ greeting: 'hello API' });
 });
 
-app.get('/api/:date', (req, res) => {
-  // const d = req.params.date;
-  const d = parseInt(req.params.date);
-  console.log('req.params.date', d);
-  const date = new Date(d);
-  // const date = new Date(parseInt(req.params.date));
-  // const date = new Date(1451001600000);
-  console.log('date', date);
-  if (!isNaN(date) && date.toString() !== 'Invalid Date') {
-    res.json({
-      "unix": date.getTime(),
-      "utc": date.toUTCString()
-    });
+app.get('/api/:date?', (req, res) => {
+  const d = req.params.date;
+  console.log(`req.params.date: '${d}'`);
+
+  const dInt = Number(req.params.date);
+  console.log(`Numbering date: '${dInt}'`);
+
+  let date;
+  if (dInt) {
+    // If d is a number, treat it as a timestamp
+    date = new Date(dInt);
   } else {
-    res.json({ error: "Invalid Date" });
+    // Otherwise, treat it as a date string
+    date = new Date(d);
   }
+
+  console.log('date', date);
+  let result = {}
+  if (d === undefined || d === '') {
+    const now = new Date();
+    result.unix = now.getTime();
+    result.utc = now.toUTCString();
+  } else if (!isNaN(date) && date.toString() !== 'Invalid Date') {
+    result.unix = date.getTime();
+    result.utc = date.toUTCString();
+  } else {
+    result.error = "Invalid Date";
+  }
+  console.log('result', result);
+  res.json(result);
 });
 
 // Listen on port set in environment variable or default to 3000
